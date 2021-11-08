@@ -30,6 +30,8 @@ $sql[0] = 'CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . 'studentdiscounts` (
     `email` varchar(255) NOT NULL UNIQUE,
     `validated` BIT DEFAULT 0,
     `verificated` BIT DEFAULT 0,
+    `active` BIT DEFAULT 0,
+    `account_validity_period` DATE DEFAULT NULL,
     `token` varchar(255) NOT NULL,
     PRIMARY KEY  (`id_studentdiscounts`)
 ) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=utf8;';
@@ -38,6 +40,14 @@ $sql[1] = 'CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . 'student_domain` (
     `id_student_domain` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
     `domain` varchar(255) NOT NULL UNIQUE,
     PRIMARY KEY  (`id_student_domain`)
+) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=utf8;';
+
+$sql[2] = 'CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . 'studentdiscounts_image` (
+    `id_studentdiscounts_image` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+    `id_studentdiscounts` int(10) UNSIGNED NOT NULL,
+    `image` varchar(255) NOT NULL UNIQUE,
+    PRIMARY KEY  (`id_studentdiscounts_image`),
+    FOREIGN KEY (`id_studentdiscounts`) REFERENCES `' . _DB_PREFIX_ . 'studentdiscounts`(`id_studentdiscounts`)
 ) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=utf8;';
 
 foreach ($sql as $query) {

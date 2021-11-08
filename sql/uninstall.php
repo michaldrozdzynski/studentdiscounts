@@ -31,5 +31,7 @@
  */
 $query = 'DROP TABLE `' . _DB_PREFIX_ . 'studentdiscounts`';
 $query2 = 'DROP TABLE `' . _DB_PREFIX_ . 'student_domain`';
+$query3 = 'DROP TABLE `' . _DB_PREFIX_ . 'studentdiscounts_image`';
+Db::getInstance()->execute($query3);
 Db::getInstance()->execute($query2);
 Db::getInstance()->execute($query);

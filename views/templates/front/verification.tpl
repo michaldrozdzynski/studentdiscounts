@@ -1,4 +1,4 @@
-{extends file='layouts/layout-left-column.tpl'}
+{extends file='layouts/layout-full-width.tpl'}
 
 {block name='content'}
   <section id="main">
