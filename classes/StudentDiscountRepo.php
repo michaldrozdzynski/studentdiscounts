@@ -20,10 +20,8 @@ class StudentDiscountRepo{
         return $students;
     }
     
-    public static function delete($id) {
-        $query =  'DELETE FROM `' . _DB_PREFIX_ . 'studentdiscounts_image` WHERE id_studentdiscounts = ' . $id; 
-        Db::getInstance()->execute($query);
-
+    public static function delete($id) {;
+        StudentDiscountRepo::deleteImageById($id);
         $query =  'DELETE FROM `' . _DB_PREFIX_ . 'studentdiscounts` WHERE id_studentdiscounts = ' . $id; 
         Db::getInstance()->execute($query);
     }
@@ -86,11 +84,59 @@ class StudentDiscountRepo{
         }
     }
 
+    public static function desactive($id) {
+        StudentDiscountRepo::deleteImageById($id);
+
+        $query = 'UPDATE `' . _DB_PREFIX_ . 'studentdiscounts` SET active = 0, 	account_validity_period = NULL WHERE id_studentdiscounts = ' . $id;
+        Db::getInstance()->execute($query);
+
+        $query = 'SELECT * FROM `' . _DB_PREFIX_ . 'studentdiscounts` WHERE id_studentdiscounts = ' . $id;
+        $result = Db::getInstance()->getRow($query);
+        $email = $result['email'];
+    
+        $customerId = StudentDiscountRepo::getCustomerId($email);
+        if ($customerId) {
+            $query = 'SELECT * FROM `' . _DB_PREFIX_ . 'customer_group` WHERE id_customer = ' . $customerId . ' AND id_group = ' . Configuration::get('STUDENT_GROUP');
+            $result = Db::getInstance()->getRow($query);
+                
+                if ($result) {
+                    $query = 'DELETE FROM ' . _DB_PREFIX_ . 'customer_group WHERE id_customer = ' . $customerId . ' AND id_group = ' . Configuration::get('STUDENT_GROUP');
+                    Db::getInstance()->execute($query);
+            }
+        }
+    }
+
     public static function isActive($id) {
         $query = 'SELECT active FROM `' . _DB_PREFIX_ . 'studentdiscounts` WHERE id_studentdiscounts = ' . $id;
         $result = Db::getInstance()->getRow($query);
         $active = $result['active'];
 
         return $active;
+    }
+
+    public static function deleteImageById($id) {
+        $query = 'SELECT image FROM `' . _DB_PREFIX_ . 'studentdiscounts_image` WHERE 	id_studentdiscounts  = ' . $id;
+        $images = Db::getInstance()->executeS($query);
+        $query = 'DELETE FROM ' . _DB_PREFIX_ . 'studentdiscounts_image WHERE id_studentdiscounts = '.$id ;
+        Db::getInstance()->execute($query);
+        foreach ($images as $image) {
+            $filename = $image['image'];
+            $filename = _PS_MODULE_DIR_ .'studentdiscounts/upload/studentcarts/' . $filename;
+            if (file_exists($filename)) {
+                unlink($filename);
+            }
+        }
+    }
+
+    public static function checkIsAccountActive() {
+        $date = date("Y-m-d");
+        $query = 'SELECT id_studentdiscounts FROM ' . _DB_PREFIX_ . 'studentdiscounts WHERE active  = 1 AND account_validity_period < \''. $date.'\'';
+        $results = Db::getInstance()->executeS($query);
+
+        foreach ($results as $result) {
+            $id = $result['id_studentdiscounts'];
+
+            StudentDiscountRepo::desactive($id);
+        }
     }
 }

@@ -3,11 +3,11 @@
 {block name='content'}
   <section id="main">
     <header class="page-header">
-      <h1>Twoje konto studenckie</h1>
+      <h1>{l s='Your student account' mod='studentdiscounts'}</h1>
     </header>
     <div class="row ">
         <label class="col-md-3">
-                        Imię i nazwisko:
+                        {l s='First name and last name:' mod='studentdiscounts'}
                     </label>
         <div class="col-md-6">
           {$studentaccount['name']}
@@ -15,7 +15,7 @@
     </div>
     <div class="row ">
         <label class="col-md-3">
-                        E-mail:
+                        {l s='Email:' mod='studentdiscounts'}
                     </label>
         <div class="col-md-6">
           {$studentaccount['email']}
@@ -23,7 +23,7 @@
     </div>  
     <div class="row ">
         <label class="col-md-3">
-                        Czy zweryfikowano email?
+                        {l s='Has the email been verified?' mod='studentdiscounts'}
                     </label>
         <div class="col-md-6">
           {$studentaccount['verificated']}
@@ -31,7 +31,7 @@
     </div>
     <div class="row ">
         <label class="col-md-3">
-                        Czy potwierdzono domene studencką?
+                        {l s='Has the student domain been confirmed?' mod='studentdiscounts'}
                     </label>
         <div class="col-md-6">
           {$studentaccount['validated']}
@@ -39,7 +39,7 @@
     </div>
     <div class="row ">
         <label class="col-md-3">
-                        Czy konto jest aktywne?
+                        {l s='Is the account active?' mod='studentdiscounts'}
                     </label>
         <div class="col-md-6">
           {$studentaccount['active']}
@@ -50,7 +50,7 @@
     <form action="{Context::getContext()->link->getModuleLink('studentdiscounts', 'studentaccount')}" enctype="multipart/form-data" method="post">
     <div class="row ">
     <label class="col-md-3">
-                        Aby aktywować konto prześli zdjęcie legitymacji.
+                        {l s='To activate your account, please send a photo of your student ID.' mod='studentdiscounts'}
                     </label>
     <div class="col-md-6"> 
     <input type="file" multiple="multiple" id="studentCart" name="studentCart[]">
@@ -67,10 +67,10 @@
     {elseif count($studentaccount['studentCart']) > 0 && $studentaccount['activeValue'] == 0 }
     <div class="row">
         <label class="col-md-3">
-                        Przesłano zdjęcia legitymacji.
+                        {l s='Photos of student ID card sent.' mod='studentdiscounts'}
                     </label>
       <div class="col-md-6"> 
-        Czekaj na weryfikację
+        {l s='Wait for verification' mod='studentdiscounts'}
       </div>
         </div>
     {/if}
@@ -86,7 +86,7 @@
 
         // Check files count
         if (files.length > 2) {
-            alert(`Only 2 files are allowed to upload.`);
+            alert({l s='Only 2 files are allowed to upload' mod='studentdiscounts'});
             input.value = '';
         }
     });

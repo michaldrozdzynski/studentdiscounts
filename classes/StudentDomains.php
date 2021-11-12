@@ -25,6 +25,8 @@ class StudentDomains {
                 'domain' => $domain,
             ]);
         }
-    
+
+        $query = 'UPDATE `' . _DB_PREFIX_ . 'studentdiscounts` SET validated = 1 WHERE verificated = 1 AND email LIKE \'%' . $domain .'\'';
+        Db::getInstance()->execute($query);
     }
 }

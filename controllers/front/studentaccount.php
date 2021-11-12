@@ -6,12 +6,19 @@ class StudentdiscountsStudentaccountModuleFrontController extends ModuleFrontCon
     	parent::initContent();
 
         $customer = Context::getContext()->customer;
+       //ump(Tools::getHttpHost(true).__PS_BASE_URI__);
         if ($customer->id == null) {
+            Tools::redirect(Tools::getHttpHost(true).__PS_BASE_URI__);
 
         }
         $name = $customer->firstname . ' ' . $customer->lastname;
         $email = $customer->email;
         $result = $this->getStudentByEmail($email);
+
+        if (count($result) == 0) {
+            Tools::redirect(Tools::getHttpHost(true).__PS_BASE_URI__);
+        }
+        
         $id = $result[0]['id_studentdiscounts'];
         $images = $this->getImageById($id);
         $studentCart = [];
@@ -22,12 +29,12 @@ class StudentdiscountsStudentaccountModuleFrontController extends ModuleFrontCon
         $date=date_create($result[0]['account_validity_period']);
         $data = [
             'verificatedValue' => $result[0]['verificated'],
-            'verificated' => $result[0]['verificated'] == 1 ? 'Zweryfikowano e-mail' : 'Nie zweryfikowano e-mail',
+            'verificated' => $result[0]['verificated'] == 1 ? $this->l('Email verified.') : $this->l('Email not verified. Check your e-mail box to verify your e-mail address.'),
             'valdatedValue' => $result[0]['validated'],
-            'validated' => $result[0]['validated'] == 1 ? 'Potwierdzono domenę studencką' : 'Nie potwierdzono domeny studenckiej',
+            'validated' => $result[0]['validated'] == 1 ? $this->l('Student domain confirmed.') : $this->l('Student domain not confirmed. Wait for confirmation.'),
             'activeValue' => $result[0]['active'],
             'studentCart' => $studentCart,
-            'active' => $result[0]['active'] == 1 ? 'Konto aktywne do ' . date_format($date,"d.m.Y") : 'Konto nie aktywne',
+            'active' => $result[0]['active'] == 1 ? $this->l('Account active until ') . date_format($date,"d.m.Y") : $this->l('The account is not active'),
             'email' => $email,
             'name' => $name,
             'target_dir' => '/presta/modules/studentdiscounts/upload/studentcarts/',
@@ -52,7 +59,11 @@ class StudentdiscountsStudentaccountModuleFrontController extends ModuleFrontCon
     }
 
     public function postProcess() {
+
             $customer = Context::getContext()->customer;
+            if ($customer->id == null) {
+                Tools::redirect(Tools::getHttpHost(true).__PS_BASE_URI__);
+            }
             $email = $customer->email;
             $result = $this->getStudentByEmail($email);
             $studentId = $result[0]['id_studentdiscounts'];
@@ -72,12 +83,12 @@ class StudentdiscountsStudentaccountModuleFrontController extends ModuleFrontCon
                         $uploadOk = false;
                     }
 
-                    while (file_exists($target_file)) {
+                    do {
                         $filename = uniqid('studentcart', true) . '.' . $imageFileType;
                         $target_file = $target_dir . $filename;
-                    }
+                    } while (file_exists($target_file));
                     
-                    if ($uploadOk) {
+                    if ($uploadOk && $filename != '') {
                         if (move_uploaded_file($file["tmp_name"], $target_file))
                         {
                             Db::getInstance()->insert(
@@ -91,7 +102,6 @@ class StudentdiscountsStudentaccountModuleFrontController extends ModuleFrontCon
                     }
                 }
             }
-
     }
 
     private function reArrayFiles(&$file_post) {

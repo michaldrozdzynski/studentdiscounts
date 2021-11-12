@@ -23,21 +23,8 @@
  * @copyright Since 2007 PrestaShop SA and Contributors
  * @license   https://opensource.org/licenses/OSL-3.0 Open Software License (OSL 3.0)
  */
-class AuthControllerCore extends FrontController
+class AuthController extends AuthControllerCore
 {
-    public $ssl = true;
-    public $php_self = 'authentication';
-    public $auth = false;
-
-    public function checkAccess()
-    {
-        if ($this->context->customer->isLogged() && !$this->ajax) {
-            $this->redirect_after = ($this->authRedirection) ? urlencode($this->authRedirection) : 'my-account';
-            $this->redirect();
-        }
-
-        return parent::checkAccess();
-    }
 
     public function initContent()
     {
@@ -109,24 +96,5 @@ class AuthControllerCore extends FrontController
             // go home
             return $this->redirectWithNotifications(__PS_BASE_URI__);
         }
-    }
-
-    public function getBreadcrumbLinks()
-    {
-        $breadcrumb = parent::getBreadcrumbLinks();
-
-        if (Tools::isSubmit('submitCreate') || Tools::isSubmit('create_account')) {
-            $breadcrumb['links'][] = [
-                'title' => $this->trans('Create an account', [], 'Shop.Theme.Customeraccount'),
-                'url' => $this->context->link->getPageLink('authentication'),
-            ];
-        } else {
-            $breadcrumb['links'][] = [
-                'title' => $this->trans('Log in to your account', [], 'Shop.Theme.Customeraccount'),
-                'url' => $this->context->link->getPageLink('authentication'),
-            ];
-        }
-
-        return $breadcrumb;
     }
 }

@@ -2,7 +2,9 @@
 
 {block name='content'}
   <section id="main">
-   Weryfikacja się nie powiodła
+  <h1>
+     {l s='The email address could not be verified!' mod='studentdiscounts'}
+  </h1>
 
   </section>
 {/block}

@@ -28,9 +28,7 @@ if (!defined('_PS_VERSION_')) {
     exit;
 }
 
-require_once('classes/StudentDomainClass.php');
 require_once('classes/StudentDomains.php');
-require_once('classes/StudentDiscountClass.php');
 require_once('classes/StudentDiscountRepo.php');
 
 class Studentdiscounts extends Module
@@ -56,6 +54,7 @@ class Studentdiscounts extends Module
         $this->description = $this->l('The module allows users to create a student account that entitles you to discounts');
 
         $this->ps_versions_compliancy = array('min' => '1.7', 'max' => _PS_VERSION_);
+        $this->mySuperCron();
     }
 
     /**
@@ -88,8 +87,7 @@ class Studentdiscounts extends Module
             $this->registerHook('header') &&
             $this->registerHook('backOfficeHeader') &&
             $this->registerHook('actionStudentDiscount') &&
-            $this->registerHook('displayStudentAccount')
-            && $this->installTab();
+            $this->registerHook('displayStudentAccount');
     }
 
     public function hookDisplayStudentAccount() {
@@ -106,55 +104,9 @@ class Studentdiscounts extends Module
 
         Configuration::deleteByName('STUDENT_GROUP');
 
-        return parent::uninstall() &&
-            $this->uninstallTab();
+        return parent::uninstall();
     }
 
-    public function enable($force_all = false)
-    {
-        return parent::enable($force_all)
-            && $this->installTab()
-        ;
-    }
-
-    public function disable($force_all = false)
-    {
-        return parent::disable($force_all)
-            && $this->uninstallTab()
-        ;
-    }
-
-    private function installTab()
-    {
-        $tabId = (int) Tab::getIdFromClassName('AdminStudentDomain');
-        if (!$tabId) {
-            $tabId = null;
-        }
-
-        $tab = new Tab($tabId);
-        $tab->active = 1;
-        $tab->class_name = 'AdminStudentDomain';
-        $tab->name = array();
-        foreach (Language::getLanguages() as $lang) {
-            $tab->name[$lang['id_lang']] = $this->trans('Student Domains', array(), 'Modules.MyModule.Admin', $lang['locale']);
-        }
-        $tab->id_parent = (int) Tab::getIdFromClassName('ShopParameters');
-        $tab->module = $this->name;
-
-        return $tab->save();
-    }
-
-    private function uninstallTab()
-    {
-        $tabId = (int) Tab::getIdFromClassName('AdminStudentDomain');
-        if (!$tabId) {
-            return true;
-        }
-
-        $tab = new Tab($tabId);
-
-        return $tab->delete();
-    }
     public function getContent()
     {
         if (Tools::isSubmit('submitGroupConfiguration')) {
@@ -163,9 +115,22 @@ class Studentdiscounts extends Module
         }
         
         if (Tools::isSubmit('addDomains')){
+            if (Tools::isSubmit('downloadSample')){
+                $filename = _PS_MODULE_DIR_ .'studentdiscounts/sample.csv';
+                if (file_exists($filename)) {
+                    header('Content-Description: File Transfer');
+                    header('Content-Type: application/octet-stream');
+                    header('Content-Disposition: attachment; filename="'.basename($filename).'"');
+                    header('Expires: 0');
+                    header('Cache-Control: must-revalidate');
+                    header('Pragma: public');
+                    header('Content-Length: ' . filesize($filename));
+                    readfile($filename);
+                    exit;
+                }
+            }
             return $this->addDomain();
         }
-
         if (Tools::isSubmit('viewstudentdiscounts')){
             return $this->viewStudent();
         }
@@ -174,6 +139,11 @@ class Studentdiscounts extends Module
             if(Tools::getValue('active')) {
                 StudentDiscountRepo::active(Tools::getValue('studentId'));
             }
+        }
+        if (Tools::getValue('activeStudentAccount') === '1') {
+            StudentDiscountRepo::active(Tools::getValue('studentId'));
+        } else if (Tools::getValue('activeStudentAccount') === '0') {
+            StudentDiscountRepo::desactive(Tools::getValue('studentId'));
         }
 
         if (Tools::isSubmit('submitAddDomain')) {
@@ -204,22 +174,10 @@ class Studentdiscounts extends Module
                                 StudentDomains::add($domain[0]);
                             }
                         }
+                        unlink($target_file);
                     }
                 }
             }
-        }
-
-        $delete = Tools::getValue('del'); 
-        $confirm = Tools::getValue('confirm'); 
-        $id = Tools::getValue('id');
-        $domain = Tools::getValue('domain');
-        if ($id && $confirm == 'confirm') {
-            StudentDiscountRepo::confirm($id);
-            if ($domain) {
-                StudentDiscountRepo::confirmByDomain($domain);
-            }
-        } else if ($id && $delete == 'delete') {
-            StudentDiscountRepo::delete($id);
         }
 
         $studentId = Tools::getValue("id_studentdiscounts");
@@ -227,7 +185,7 @@ class Studentdiscounts extends Module
         $statusstudentdiscounts = Tools::getValue("statusstudentdiscounts");
         $activestudentdiscounts = Tools::getValue("activestudentdiscounts");
         if ($deleteStudentDiscounts !== false) {
-            StudentDiscountRepo::delete($studentId);
+            StudentDiscountRepo::deleteImageById($studentId );
         } else if ($statusstudentdiscounts !== false) {
             StudentDiscountRepo::confirm($studentId);
         } else if ($activestudentdiscounts !== false) {
@@ -247,65 +205,7 @@ class Studentdiscounts extends Module
     }
 
     private function viewStudent() {
-        $fields_form = [
-            'form' => [
-                'legend' => [
-                    'title' => $this->l('View student'),
-                    'icon' => 'icon-link',
-                ],
-                'input' => [
-                    [
-                        'type' => 'switch',
-                        'label' => $this->l('Active'),
-                        'name' => 'active',
-                        'is_bool' => true,
-                        'default_value' => 1,
-                        'values' => array(
-                          array(
-                            'id' => 'active_on',
-                            'value' => 1,
-                            'label' => $this->l('Enabled')
-                          ),
-                          array(
-                            'id' => 'active_off',
-                            'value' => 0,
-                            'label' => $this->l('Disabled')
-                          )
-                                  )
-                          ],
-                    [
-                        'type' => 'hidden',
-                        'name' => 'studentId'
-                    ],
-                ],
-                'submit' => [
-                    'name' => 'submitViewStudent',
-                    'title' => $this->trans('Save', [], 'Admin.Actions'),
-                ],
-            ],
-        ];
-       
-
-        $helper = new HelperForm();
-        $helper->show_toolbar = false;
-        $helper->table = 'studentdiscounts';
-        $lang = new Language((int) Configuration::get('PS_LANG_DEFAULT'));
-        $helper->default_form_language = $lang->id;
-        $helper->allow_employee_form_lang = Configuration::get('PS_BO_ALLOW_EMPLOYEE_FORM_LANG') ? Configuration::get('PS_BO_ALLOW_EMPLOYEE_FORM_LANG') : 0;
-        $helper->module = $this;
-        $helper->identifier = 'id_studentdiscounts';
-        $helper->currentIndex = $this->context->link->getAdminLink('AdminModules', true) .
-            '&configure=' . $this->name . '&tab_module=' . $this->tab . '&module_name=' . $this->name;
-        $helper->token = Tools::getAdminTokenLite('AdminModules');
-        $helper->tpl_vars = [
-            'languages' => $this->context->controller->getLanguages(),
-            'id_language' => $this->context->language->id,
-        ];
         $studentId = Tools::getValue("id_studentdiscounts");
-        $helper->fields_value = array(
-            'active' => StudentDiscountRepo::isActive($studentId),
-            'studentId' => $studentId,
-       );
         
         $studentCart = [];
         $images = $this->getImageById($studentId);
@@ -313,9 +213,10 @@ class Studentdiscounts extends Module
             array_push($studentCart, $image['image']);
         }
 
+        $this->context->smarty->assign('studentId', $studentId);
         $this->context->smarty->assign('studentCart', $studentCart);
         $output = $this->context->smarty->fetch($this->local_path.'views/templates/admin/studentdiscounts.tpl');
-        return $output . $helper->generateForm([$fields_form]);
+        return $output;
     }
 
     private function getImageById($id) {
@@ -334,57 +235,65 @@ class Studentdiscounts extends Module
               'align' => 'center',
               'class' => 'fixed-width-xs',
               'search' => false,
+              'orderby' => true,
             ),
           'email' => array(
-              'title' => 'Email',
+              'title' => $this->l('Email'),
               'orderby' => true,
               'class' => 'fixed-width-xxl',
               'search' => false,
             ),
             'active' => array(
-                'title' => 'Active',
+                'title' => $this->l('Active'),
                 'orderby' => true,
                 'class' => 'fixed-width-xxl',
                 'search' => false,
                 'align' => 'center',
-        			'active' => 'active',
-        			'type' => 'bool',
+        		'type' => 'bool',
               ),
               'images' => array(
-                'title' => 'Images',
+                'title' => $this->l('Photos'),
                 'class' => 'fixed-width-xxl',
                 'callback' => 'displayImages',
                 'callback_object' => $this,
+                'search' => false,
               ),
               'account_validity_period' => array(
-                'title' => 'Account validity period',
+                'title' => $this->l('Account validity period'),
                 'class' => 'fixed-width-xs',
                 'search' => false,
-                'orderby' => true,
+                'orderby' => false,
               ),
         );
   
         $helper = new HelperList();
         $helper->shopLinkType = '';
-        $helper->simple_header = true;
+        $helper->simple_header = false;
         $helper->identifier = 'id_studentdiscounts';
         $helper->table = 'studentdiscounts';
-        $helper->actions = ['view', 'delete'];
+        $helper->actions = ['view'];
         $helper->show_toolbar = false;
         $helper->module = $this;
+        $helper->listTotal = count($students);
+        $helper->_default_pagination = 10;
+        $helper->_pagination = array(5, 10, 50, 100);
         $helper->title = $this->l('Students with verificated mail and valid domain');
         $helper->token = Tools::getAdminTokenLite('AdminModules');
         $helper->currentIndex = AdminController::$currentIndex . '&configure=' . $this->name;
+        $page = ( $page = Tools::getValue( 'submitFilter' . $helper->table ) ) ? $page : 1;
+        $pagination = ( $pagination = Tools::getValue( $helper->table . '_pagination' ) ) ? $pagination : 10;
+        $content = $this->paginate_content( $students, $page, $pagination );
 
-        return $helper->generateList($students, $fields_list);    
+        return $helper->generateList($content, $fields_list);    
     }
 
     public function displayImages($images) {
         $img = '';
 
         foreach ($images as $image) {
-            $img .= '<img width="100px" src="/presta/modules/studentdiscounts/upload/studentcarts/' . $image['image'] . '" alt="student cart"/>';
+            $img .= '<img width="100px" src="'._MODULE_DIR_ .'studentdiscounts/upload/studentcarts/' . $image['image'] . '" alt="student cart"/>';
         }
+
         return $img;
     }
 
@@ -413,7 +322,7 @@ class Studentdiscounts extends Module
                             'label' => $this->l('Group'),
                             'name' => 'group',
                             'size' => 1,
-                            'desc'     => '<a href="'. $this->context->link->getAdminLink('AdminGroups', false) . '&token='. Tools::getAdminTokenLite('AdminGroups') .'">' . $this->l('Kliknij, aby edytować lub dodać nową grupę.').'</a>',
+                            'desc'     => '<a href="'. $this->context->link->getAdminLink('AdminGroups', false) . '&token='. Tools::getAdminTokenLite('AdminGroups') .'">' . $this->l('Click to edit or add a new group.').'</a>',
                             'required' => true,
                             'options' => [
                                 'query' => $options,
@@ -472,7 +381,8 @@ class Studentdiscounts extends Module
                         'multiple' => false,
                         'label' => $this->l('Choose .csv file'),
                         'lang' => true,
-                        'id' => 'csv-file'
+                        'id' => 'csv-file',
+                        'desc'=> '<a href="'. $this->context->link->getAdminLink('AdminModules', false) . '&configure=studentdiscounts&module_name=studentdiscounts&addDomains=&downloadSample=&token='. Tools::getAdminTokenLite('AdminModules') .'">' . $this->l('Click to download a sample .csv file.').'</a>',
                     ],
                 ],
                 'submit' => [
@@ -513,13 +423,13 @@ class Studentdiscounts extends Module
               'search' => false,
             ),
           'email' => array(
-              'title' => 'Email',
+              'title' => $this->l('Email'),
               'orderby' => true,
               'class' => 'fixed-width-xxl',
               'search' => false,
             ),
             'validated' => array(
-                'title' => 'Validated',
+                'title' => $this->l('Validated'),
                 'orderby' => true,
                 'class' => 'fixed-width-xxl',
                 'search' => false,
@@ -531,17 +441,23 @@ class Studentdiscounts extends Module
   
         $helper = new HelperList();
         $helper->shopLinkType = '';
-        $helper->simple_header = true;
+        $helper->simple_header = false;
         $helper->identifier = 'id_studentdiscounts';
         $helper->table = 'studentdiscounts';
         $helper->actions = ['delete'];
         $helper->show_toolbar = false;
+        $helper->_default_pagination = 10;
+        $helper->listTotal = count($students);
+        $helper->_pagination = array(5, 10, 50, 100);
         $helper->module = $this;
         $helper->title = $this->l('Students with not valid domain');
         $helper->token = Tools::getAdminTokenLite('AdminModules');
         $helper->currentIndex = AdminController::$currentIndex . '&configure=' . $this->name;
+        $page = ( $page = Tools::getValue( 'submitFilter' . $helper->table ) ) ? $page : 1;
+        $pagination = ( $pagination = Tools::getValue( $helper->table . '_pagination' ) ) ? $pagination : 10;
+        $content = $this->paginate_content( $students, $page, $pagination );
 
-        return $helper->generateList($students, $fields_list);
+        return $helper->generateList($content, $fields_list);
     }
 
     public function domainList() {
@@ -553,10 +469,10 @@ class Studentdiscounts extends Module
               'align' => 'center',
               'class' => 'fixed-width-xs',
               'search' => false,
+              'orderby' => true,
             ),
           'domain' => array(
-              'title' => 'Domain',
-              'orderby' => true,
+              'title' => $this->l('Domain'),
               'class' => 'fixed-width-xxl',
               'search' => false,
             ),
@@ -569,26 +485,37 @@ class Studentdiscounts extends Module
         $helper->table = 'student_domain';
         $helper->actions = ['delete'];
         $helper->show_toolbar = false;
+        $helper->listTotal = count($domains);
+        $helper->_default_pagination = 10;
+        $helper->_pagination = array(5, 10, 50, 100);
         $helper->toolbar_btn['new'] = [
             'href' => $this->context->link->getAdminLink('AdminModules', true, [], ['configure' => $this->name, 'module_name' => $this->name, 'addDomains' => '']),
             'desc' => $this->trans('Add New Criterion', [], 'Modules.Productcomments.Admin'),
         ];
         $helper->module = $this;
-        $helper->className = "StudentDomainClass";
         $helper->title = $this->l('Domain list');
         $helper->token = Tools::getAdminTokenLite('AdminModules');
         $helper->currentIndex = AdminController::$currentIndex . '&configure=' . $this->name;
+        $page = ( $page = Tools::getValue( 'submitFilter' . $helper->table ) ) ? $page : 1;
+        $pagination = ( $pagination = Tools::getValue( $helper->table . '_pagination' ) ) ? $pagination : 10;
+        $content = $this->paginate_content( $domains, $page, $pagination );
 
-        return $helper->generateList($domains, $fields_list);
+        return $helper->generateList($content, $fields_list);
     }
 
-    public function confirm()  {
-        return '<a><button type="button" class="btn btn-primary">ZATWIERDŹ</button></a><a><button type="button" class="btn btn-success">ZATWIERDŹ I DODAJ DOMENĘ</button></a>';
-    }
+        /**
+    * Add the CSS & JavaScript files you want to be loaded in the BO.
+    */
+    public function paginate_content( $content, $page = 1, $pagination = 10 ) {
 
-    public function confirmAndAddDomain()  {
-        return '<a><button type="button" class="btn btn-success">ZATWIERDŹ I DODAJ DOMENĘ</button></a>';
-    }
+        if( count($content) > $pagination ) {
+             $content = array_slice( $content, $pagination * ($page - 1), $pagination );
+        }
+     
+        return $content;
+     
+     }
+
     /**
     * Add the CSS & JavaScript files you want to be loaded in the BO.
     */
@@ -619,13 +546,13 @@ class Studentdiscounts extends Module
     }
 
 	public function sendMail($email, $link) {
-    	 Mail::Send(
+        Mail::Send(
             (int)(Configuration::get('PS_LANG_DEFAULT')), // defaut language id
             'account_activation', // email template file to be use
-            'Weryfikacja e-maila', // email subject
+            $this->l('Email verification'), // email subject
             array(
                 '{email}' => Configuration::get('PS_SHOP_EMAIL'), // sender email address
-                '{message}' => 'Hello world', // email content
+                '{message}' => $this->l('Thank you for creating your student account, please click the activation link to verify your email address.'), // email content
             	'{link}' => $link,
             ),
             $email, // receiver email address
@@ -636,5 +563,14 @@ class Studentdiscounts extends Module
             NULL, //mode smtp
             _PS_MODULE_DIR_ . 'studentdiscounts/mails' //custom template path
         );
+    }
+
+    public function mySuperCron() {
+        $next = strtotime('now + 24 hours');
+        if ((int) Configuration::get('MYSUPERMODULETIMER') < (int) strtotime('now') ) {
+            StudentDiscountRepo::checkIsAccountActive();
+
+            Configuration::updateValue('MYSUPERMODULETIMER', (int) $next);
+        }
     }
 }

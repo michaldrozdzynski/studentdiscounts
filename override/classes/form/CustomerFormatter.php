@@ -25,7 +25,7 @@
  */
 use Symfony\Component\Translation\TranslatorInterface;
 
-class CustomerFormatterCore implements FormFormatterInterface
+class CustomerFormatter extends CustomerFormatterCore
 {
     private $translator;
     private $language;
@@ -86,11 +86,14 @@ class CustomerFormatterCore implements FormFormatterInterface
 
         return $this;
     }
-
+       /*
+    * module: studentdiscounts
+    * date: 2021-11-10 18:42:45
+    * version: 1.0.0
+    */
     public function getFormat()
     {
         $format = [];
-
         $genders = Gender::getGenders($this->language->id);
         if ($genders->count() > 0) {
             $genderField = (new FormField())
@@ -108,7 +111,6 @@ class CustomerFormatterCore implements FormFormatterInterface
             }
             $format[$genderField->getName()] = $genderField;
         }
-
         $format['firstname'] = (new FormField())
             ->setName('firstname')
             ->setLabel(
@@ -123,7 +125,6 @@ class CustomerFormatterCore implements FormFormatterInterface
                 'comment',
                 $this->translator->trans('Only letters and the dot (.) character, followed by a space, are allowed.', [], 'Shop.Forms.Help')
             );
-
         $format['lastname'] = (new FormField())
             ->setName('lastname')
             ->setLabel(
@@ -138,7 +139,6 @@ class CustomerFormatterCore implements FormFormatterInterface
                 'comment',
                 $this->translator->trans('Only letters and the dot (.) character, followed by a space, are allowed.', [], 'Shop.Forms.Help')
             );
-
         if (Configuration::get('PS_B2B_ENABLE')) {
             $format['company'] = (new FormField())
                 ->setName('company')
@@ -152,7 +152,6 @@ class CustomerFormatterCore implements FormFormatterInterface
                 ->setName('siret')
                 ->setType('text')
                 ->setLabel($this->translator->trans(
-                    // Please localize this string with the applicable registration number type in your country. For example : "SIRET" in France and "Código fiscal" in Spain.
                     'Identification number',
                     [],
                     'Shop.Forms.Labels'
@@ -184,7 +183,6 @@ class CustomerFormatterCore implements FormFormatterInterface
                 'Jeśli jesteś studentem podaj e-mail studencki.',
             )
             ->setRequired(true);
-
         if ($this->ask_for_password) {
             $format['password'] = (new FormField())
                 ->setName('password')
@@ -198,7 +196,6 @@ class CustomerFormatterCore implements FormFormatterInterface
                 )
                 ->setRequired($this->password_is_required);
         }
-
         if ($this->ask_for_new_password) {
             $format['new_password'] = (new FormField())
                 ->setName('new_password')
@@ -211,7 +208,6 @@ class CustomerFormatterCore implements FormFormatterInterface
                     )
                 );
         }
-
         if ($this->ask_for_birthdate) {
             $format['birthday'] = (new FormField())
                 ->setName('birthday')
@@ -229,7 +225,6 @@ class CustomerFormatterCore implements FormFormatterInterface
                     $this->translator->trans('(E.g.: %date_format%)', ['%date_format%' => Tools::formatDateStr('31 May 1970')], 'Shop.Forms.Help')
                 );
         }
-
         if ($this->ask_for_partner_optin) {
             $format['optin'] = (new FormField())
                 ->setName('optin')
@@ -243,25 +238,18 @@ class CustomerFormatterCore implements FormFormatterInterface
                 )
                 ->setRequired($this->partner_optin_is_required);
         }
-
-        // ToDo, replace the hook exec with HookFinder when the associated PR will be merged
         $additionalCustomerFormFields = Hook::exec('additionalCustomerFormFields', ['fields' => &$format], null, true);
-
         if (is_array($additionalCustomerFormFields)) {
             foreach ($additionalCustomerFormFields as $moduleName => $additionnalFormFields) {
                 if (!is_array($additionnalFormFields)) {
                     continue;
                 }
-
                 foreach ($additionnalFormFields as $formField) {
                     $formField->moduleName = $moduleName;
                     $format[$moduleName . '_' . $formField->getName()] = $formField;
                 }
             }
         }
-
-        // TODO: TVA etc.?
-
         return $this->addConstraints($format);
     }
 
