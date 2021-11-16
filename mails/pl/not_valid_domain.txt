@@ -1,0 +1,11 @@
+{shop_url}
+
+Witaj
+
+Twój adres email: {email}
+
+Link weryfikacyjny: {link}
+
+{message}
+
+[{shop_name}]({shop_url})

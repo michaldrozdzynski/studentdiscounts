@@ -27,8 +27,12 @@ class StudentDiscountRepo{
     }
 
     public static function confirm($id) {
-        $query = 'UPDATE `' . _DB_PREFIX_ . 'studentdiscounts` SET validated = 1 WHERE verificated = 1 AND id_studentdiscounts = ' . $id;
-        Db::getInstance()->execute($query);
+        $query = 'SELECT * FROM `' . _DB_PREFIX_ . 'studentdiscounts` WHERE id_studentdiscounts = ' . $id;
+        $students = Db::getInstance()->executeS($query);
+        $email = $students[0]['email'];
+        $domain = explode('@', $email)[1];
+        
+        StudentDiscountRepo::confirmByDomain($domain);
     }
 
     public static function confirmByDomain($domain) {
@@ -46,16 +50,8 @@ class StudentDiscountRepo{
         }
     }
 
-    public static function getCustomerId($email) {
-        $query = 'SELECT id_customer FROM `' . _DB_PREFIX_ . 'customer` WHERE email = \''.$email . '\'';
-        $result = Db::getInstance()->getRow($query);
-        $id = $result['id_customer'];
-    
-        return $id;
-    }
-
-    public static function existStudentWithEmail($email) {
-        $query = 'SELECT * FROM `' . _DB_PREFIX_ . 'studentdiscounts` WHERE email = \''.$email . '\'';
+    public static function existStudentWithCustomerId($customerId) {
+        $query = 'SELECT * FROM `' . _DB_PREFIX_ . 'studentdiscounts` WHERE id_customer = ' . $customerId;
         $result = Db::getInstance()->executeS($query);
         
         return count($result) > 0;
@@ -70,7 +66,7 @@ class StudentDiscountRepo{
         $result = Db::getInstance()->getRow($query);
         $email = $result['email'];
     
-        $customerId = StudentDiscountRepo::getCustomerId($email);
+        $customerId = $result['id_customer'];
         if ($customerId) {
             $query = 'SELECT * FROM `' . _DB_PREFIX_ . 'customer_group` WHERE id_customer = ' . $customerId . ' AND id_group = ' . Configuration::get('STUDENT_GROUP');
             $result = Db::getInstance()->getRow($query);
@@ -85,8 +81,6 @@ class StudentDiscountRepo{
     }
 
     public static function desactive($id) {
-        StudentDiscountRepo::deleteImageById($id);
-
         $query = 'UPDATE `' . _DB_PREFIX_ . 'studentdiscounts` SET active = 0, 	account_validity_period = NULL WHERE id_studentdiscounts = ' . $id;
         Db::getInstance()->execute($query);
 
@@ -94,7 +88,7 @@ class StudentDiscountRepo{
         $result = Db::getInstance()->getRow($query);
         $email = $result['email'];
     
-        $customerId = StudentDiscountRepo::getCustomerId($email);
+        $customerId = $result['id_customer'];
         if ($customerId) {
             $query = 'SELECT * FROM `' . _DB_PREFIX_ . 'customer_group` WHERE id_customer = ' . $customerId . ' AND id_group = ' . Configuration::get('STUDENT_GROUP');
             $result = Db::getInstance()->getRow($query);
@@ -130,7 +124,7 @@ class StudentDiscountRepo{
 
     public static function checkIsAccountActive() {
         $date = date("Y-m-d");
-        $query = 'SELECT id_studentdiscounts FROM ' . _DB_PREFIX_ . 'studentdiscounts WHERE active  = 1 AND account_validity_period < \''. $date.'\'';
+        $query = 'SELECT id_studentdiscounts, email FROM ' . _DB_PREFIX_ . 'studentdiscounts WHERE active  = 1 AND account_validity_period < \''. $date.'\'';
         $results = Db::getInstance()->executeS($query);
 
         foreach ($results as $result) {
@@ -138,5 +132,15 @@ class StudentDiscountRepo{
 
             StudentDiscountRepo::desactive($id);
         }
+
+        return $results;
+    }
+
+    public static function getEmailById($id) {
+        $query = 'SELECT email FROM `' . _DB_PREFIX_ . 'studentdiscounts` WHERE id_studentdiscounts = ' . $id;
+        $result = Db::getInstance()->getRow($query);
+        $email = $result['email'];
+
+        return $email;
     }
 }

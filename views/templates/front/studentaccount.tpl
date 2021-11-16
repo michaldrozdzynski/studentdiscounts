@@ -46,7 +46,7 @@
         </div>
     </div> 
 
-    {if $studentaccount['activeValue'] == 0 && count($studentaccount['studentCart']) == 0}
+    {if count($studentaccount['studentCart']) == 0}
     <form action="{Context::getContext()->link->getModuleLink('studentdiscounts', 'studentaccount')}" enctype="multipart/form-data" method="post">
     <div class="row ">
     <label class="col-md-3">
@@ -57,14 +57,11 @@
   </div>
   </div>
             <footer class="form-footer clearfix">
-            <input type="hidden" name="submitCreate" value="1">
-            
-            <input class="btn btn-primary form-control-submit float-xs-right" value="Save"type="submit"/>
-
-            
+            <input type="hidden" name="submitCreate" value="1">            
+            <input class="btn btn-primary form-control-submit float-xs-right" value="{l s='Save' mod='studentdiscounts'}"type="submit"/>
         </footer>
     </form>
-    {elseif count($studentaccount['studentCart']) > 0 && $studentaccount['activeValue'] == 0 }
+    {elseif count($studentaccount['studentCart']) > 0}
     <div class="row">
         <label class="col-md-3">
                         {l s='Photos of student ID card sent.' mod='studentdiscounts'}
@@ -73,8 +70,19 @@
         {l s='Wait for verification' mod='studentdiscounts'}
       </div>
         </div>
-    {/if}
+        <div class="row">
+          <div class="col-md-3" width="50%" style="text-align:center; margin:auto;">
+            <a href="{Context::getContext()->link->getModuleLink('studentdiscounts', 'studentaccount', array('deletePhotos' => true))}"><button type="button" class="btn btn-danger">{l s='Delete photos' mod='studentdiscounts'}</button></a>
+          </div>
+          <div class="col-md-6">
+            {foreach $studentaccount['images'] as $image}
+              <a href="{_MODULE_DIR_ }studentdiscounts/upload/studentcarts/{$image}" target="_blank"><img width="200px" src="{_MODULE_DIR_ }studentdiscounts/upload/studentcarts/{$image}" alt="student cart"/></a>
+            {/foreach}
+          </div>
+        </div>
 
+
+    {/if}
   </section>
   <script>
     const input = document.querySelector('#studentCart');
@@ -86,7 +94,7 @@
 
         // Check files count
         if (files.length > 2) {
-            alert({l s='Only 2 files are allowed to upload' mod='studentdiscounts'});
+            alert("{l s='Only 2 files are allowed to upload' mod='studentdiscounts'}");
             input.value = '';
         }
     });

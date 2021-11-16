@@ -27,6 +27,7 @@ $sql = array();
 
 $sql[0] = 'CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . 'studentdiscounts` (
     `id_studentdiscounts` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+    `id_customer` int(10) UNSIGNED NOT NULL UNIQUE,
     `email` varchar(255) NOT NULL UNIQUE,
     `validated` BIT DEFAULT 0,
     `verificated` BIT DEFAULT 0,

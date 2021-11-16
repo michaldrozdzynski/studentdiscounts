@@ -1,0 +1,9 @@
+{shop_url}
+
+Witaj
+
+Link weryfikacyjny: {link}
+
+{message}
+
+[{shop_name}]({shop_url})

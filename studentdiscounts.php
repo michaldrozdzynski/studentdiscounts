@@ -34,15 +34,14 @@ require_once('classes/StudentDiscountRepo.php');
 class Studentdiscounts extends Module
 {
     protected $config_form = false;
-
     public function __construct()
     {
         $this->name = 'studentdiscounts';
         $this->tab = 'others';
-        $this->version = '1.0.0';
+        $this->version = '1.1.0';
         $this->author = 'Michał Drożdżyński';
         $this->need_instance = 1;
-
+        
         /**
          * Set $this->bootstrap to true if your module is compliant with bootstrap (PrestaShop 1.6)
          */
@@ -82,20 +81,54 @@ class Studentdiscounts extends Module
         $groupId = $group['id_group'];
 
         Configuration::updateValue('STUDENT_GROUP', $groupId);
+        Configuration::updateValue('MODULE_LINK', '');
 
         return parent::install() &&
             $this->registerHook('header') &&
             $this->registerHook('backOfficeHeader') &&
-            $this->registerHook('actionStudentDiscount') &&
-            $this->registerHook('displayStudentAccount');
+            $this->registerHook('additionalCustomerFormFields') &&
+            $this->registerHook('actionCustomerAccountAdd') &&
+            $this->registerHook('displayCustomerAccount');
     }
 
-    public function hookDisplayStudentAccount() {
-        $email = $this->context->customer->email;
-
-        if (StudentDiscountRepo::existStudentWithEmail($email)) {
+       /**
+     * @return array|FormField[]
+     */
+    public function hookAdditionalCustomerFormFields($params)
+    {
+        $label = $this->l('I\'m student') . '<br><em>'.$this->l('If you are a student, register your account using the student domain to get a student discount. You will receive an e-mail with which we will verify that you are its owner. Then add a photo of your ID card. If your university is in the system, the system, after verifying your card, will assign you a discount of X. If your university is not in the system, wait one working day for manual verification by an employee.').'</em>';
+        
+        $formField = new FormField();
+        $formField->setName('isStudent');
+        $formField->setType('checkbox');
+        $formField->setLabel($label);
+        //dump($formField);
+        return [$formField];
+    }
+    public function hookDisplayCustomerAccount() {
+        $customerId = $this->context->customer->id;
+        if (StudentDiscountRepo::existStudentWithCustomerId($customerId)) {
             return $this->display(__FILE__, 'views/templates/hook/studentaccount.tpl');
+        } else {;}
+    }
+
+        /**
+     * @param array $params
+     */
+    public function hookActionCustomerAccountAdd(array $params)
+    {
+        if (empty($params['newCustomer']) || Tools::getValue('isStudent') == 0) {
+            return;
         }
+        $email = $params['newCustomer']->email;
+        $customerId = $params['newCustomer']->id;
+    	$token = Tools::getToken();
+        $query = "INSERT INTO `"._DB_PREFIX_."studentdiscounts` (`email`, `id_customer`, `validated`, `verificated`, `token`) VALUES (\"".$email."\",".$customerId.", 0, 0, \"". $token."\")";
+        Db::getInstance()->execute($query);
+    	$link = Context::getContext()->link->getModuleLink('studentdiscounts', 'verification', array('email' => $email, 'token' => $token));
+    	$message = $this->l('Thank you for creating your student account, please click the activation link to verify your email address.');
+        $subject = $this->l('Email verification');
+        $this->sendMail($email, $link, $message, $subject, 'account_activation');
     }
 
     public function uninstall()
@@ -109,6 +142,9 @@ class Studentdiscounts extends Module
 
     public function getContent()
     {
+        $link = Context::getContext()->link->getAdminLink('AdminModules', false) .'&configure=studentdiscounts';
+        Configuration::updateValue('MODULE_LINK', $link);
+
         if (Tools::isSubmit('submitGroupConfiguration')) {
             $groupId= Tools::getValue('group');
             Configuration::updateValue('STUDENT_GROUP', $groupId);
@@ -135,15 +171,22 @@ class Studentdiscounts extends Module
             return $this->viewStudent();
         }
 
-        if (Tools::isSubmit('submitViewStudent')){
-            if(Tools::getValue('active')) {
-                StudentDiscountRepo::active(Tools::getValue('studentId'));
-            }
-        }
         if (Tools::getValue('activeStudentAccount') === '1') {
             StudentDiscountRepo::active(Tools::getValue('studentId'));
+            $message = $this->l('Your student account has been activated. You can take advantage of student discounts.');
+            $subject = $this->l('Activation of the student account');
+            $link = _PS_BASE_URL_.__PS_BASE_URI__;
+            $template = 'active_account';
+            $email = StudentDiscountRepo::getEmailById(Tools::getValue('studentId'));
+            $this->sendMail($email, $link, $message, $subject, 'active_account');
         } else if (Tools::getValue('activeStudentAccount') === '0') {
             StudentDiscountRepo::desactive(Tools::getValue('studentId'));
+            $message = $this->l('Your account has not been activated. Send the photo of the student ID again, go to the account settings.');
+            $subject = $this->l('Your account has not been activated.');
+            $link = _PS_BASE_URL_.__PS_BASE_URI__;
+            $template = 'active_account';
+            $email = StudentDiscountRepo::getEmailById(Tools::getValue('studentId'));
+            $this->sendMail($email, $link, $message, $subject, 'active_account');
         }
 
         if (Tools::isSubmit('submitAddDomain')) {
@@ -185,22 +228,23 @@ class Studentdiscounts extends Module
         $statusstudentdiscounts = Tools::getValue("statusstudentdiscounts");
         $activestudentdiscounts = Tools::getValue("activestudentdiscounts");
         if ($deleteStudentDiscounts !== false) {
-            StudentDiscountRepo::deleteImageById($studentId );
+            $message = $this->l('Your email address does not belong to the student domain that the discounts apply to. If you are a student please re-register using your student email address.');
+            $subject = $this->l('Incorrect email address');
+            $link = _PS_BASE_URL_.__PS_BASE_URI__;
+            $template = 'active_account';
+            $email = StudentDiscountRepo::getEmailById($studentId);
+            $this->sendMail($email, $link, $message, $subject, 'active_account');
+            StudentDiscountRepo::delete($studentId);
         } else if ($statusstudentdiscounts !== false) {
             StudentDiscountRepo::confirm($studentId);
-        } else if ($activestudentdiscounts !== false) {
-            StudentDiscountRepo::active($studentId);
         }
 
         $domainId = Tools::getValue("id_student_domain");
         $deleteStudentDomain = Tools::getValue("deletestudent_domain");
         if ($deleteStudentDomain !== false) {
             StudentDomains::delete($domainId);
-        }/*
-        $this->context->smarty->assign('settingStudentDiscount', $this->renderForm());
-        $this->context->smarty->assign('studentDomains', $this->domainList());
-        $this->context->smarty->assign('studentEmailVerification', $this->studentList());*/
-        //return $this->context->smarty->fetch($this->local_path . 'views/templates/admin/menu.tpl');
+        }
+        
         return $this->renderForm() . $this->domainList() . $this->studentList() . $this->studentActiveList();
     }
 
@@ -536,23 +580,14 @@ class Studentdiscounts extends Module
         $this->context->controller->addCSS($this->_path.'/views/css/front.css');
     }
 
-    public function hookActionStudentDiscount($params) {
-        $email = $params['email'];
-    	$token = Tools::getToken();
-        $query = "INSERT INTO `"._DB_PREFIX_."studentdiscounts` (`email`, `validated`, `verificated`, `token`) VALUES (\"".$email."\", 0, 0, \"". $token."\")";
-        Db::getInstance()->execute($query);
-    	$link = Context::getContext()->link->getModuleLink('studentdiscounts', 'verification', array('email' => $email, 'token' => $token));
-    	$this->sendMail($email, $link);
-    }
-
-	public function sendMail($email, $link) {
-        Mail::Send(
+	public function sendMail($email, $link, $message, $subject, $template) {
+    	 Mail::Send(
             (int)(Configuration::get('PS_LANG_DEFAULT')), // defaut language id
-            'account_activation', // email template file to be use
-            $this->l('Email verification'), // email subject
+            $template, // email template file to be use
+            $subject, // email subject
             array(
                 '{email}' => Configuration::get('PS_SHOP_EMAIL'), // sender email address
-                '{message}' => $this->l('Thank you for creating your student account, please click the activation link to verify your email address.'), // email content
+                '{message}' => $message,
             	'{link}' => $link,
             ),
             $email, // receiver email address
@@ -568,7 +603,15 @@ class Studentdiscounts extends Module
     public function mySuperCron() {
         $next = strtotime('now + 24 hours');
         if ((int) Configuration::get('MYSUPERMODULETIMER') < (int) strtotime('now') ) {
-            StudentDiscountRepo::checkIsAccountActive();
+            $students = StudentDiscountRepo::checkIsAccountActive();
+            foreach ($students as $student) {
+                $email = $student['email'];
+                $message = $this->l('Your student account has expired. Send the photo of the student ID again, go to the account settings.');
+                $subject = $this->l('Your student account has expired');
+                $link = _PS_BASE_URL_.__PS_BASE_URI__;
+                $template = 'active_account';
+                $this->sendMail($email, $link, $message, $subject, 'active_account');
+            }
 
             Configuration::updateValue('MYSUPERMODULETIMER', (int) $next);
         }
