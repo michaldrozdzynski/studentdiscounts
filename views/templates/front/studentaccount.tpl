@@ -67,7 +67,9 @@
                         {l s='Photos of student ID card sent.' mod='studentdiscounts'}
                     </label>
       <div class="col-md-6"> 
-        {l s='Wait for verification' mod='studentdiscounts'}
+        {if $studentaccount['active'] = 0}
+          {l s='Wait for verification' mod='studentdiscounts'}
+        {/if}
       </div>
         </div>
         <div class="row">

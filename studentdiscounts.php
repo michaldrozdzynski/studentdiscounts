@@ -64,7 +64,7 @@ class Studentdiscounts extends Module
     {
         include(dirname(__FILE__).'/sql/install.php');
 
-        $request = 'SELECT `id_group` FROM `' . _DB_PREFIX_ . 'group_lang` WHERE name = "Studenci"';
+        $request = 'SELECT `id_group` FROM `' . _DB_PREFIX_ . 'group_lang` WHERE name = "Student"';
         $group = Db::getInstance()->getRow($request);
         
 
@@ -72,11 +72,11 @@ class Studentdiscounts extends Module
         if (!$group) {
             $result = Db::getInstance()->getRow($request);
             $my_group = new Group();
-            $my_group->name = array(Configuration::get('PS_LANG_DEFAULT') => 'Studenci');
+            $my_group->name = array(Configuration::get('PS_LANG_DEFAULT') => 'Student');
             $my_group->price_display_method = 1;
             $my_group->add();
         }
-        $request = 'SELECT `id_group` FROM `' . _DB_PREFIX_ . 'group_lang` WHERE name = "Studenci"';
+        $request = 'SELECT `id_group` FROM `' . _DB_PREFIX_ . 'group_lang` WHERE name = "Student"';
         $group = Db::getInstance()->getRow($request);
         $groupId = $group['id_group'];
 
