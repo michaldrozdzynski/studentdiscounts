@@ -38,7 +38,7 @@ class Studentdiscounts extends Module
     {
         $this->name = 'studentdiscounts';
         $this->tab = 'others';
-        $this->version = '1.1.2';git 
+        $this->version = '1.1.2';
         $this->author = 'Michał Drożdżyński';
         $this->need_instance = 1;
         
