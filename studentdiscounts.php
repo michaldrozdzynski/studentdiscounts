@@ -53,7 +53,9 @@ class Studentdiscounts extends Module
         $this->description = $this->l('The module allows users to create a student account that entitles you to discounts');
 
         $this->ps_versions_compliancy = array('min' => '1.7', 'max' => _PS_VERSION_);
-        $this->mySuperCron();
+        if (Module::isInstalled($this->name)) {
+            $this->mySuperCron();
+        }
     }
 
     /**
@@ -122,7 +124,19 @@ class Studentdiscounts extends Module
         }
         $email = $params['newCustomer']->email;
         $customerId = $params['newCustomer']->id;
-    	$token = Tools::getToken();
+        
+        $token = md5(uniqid(rand(), true));/*
+        $uniqueToken = false;
+        while (!$uniqueToken) {
+            $query = 'SELECT * FROM `' . _DB_PREFIX_ . 'id_studentdiscounts` WHERE 	token  = \''. $token . '\'';
+            $result = Db::getInstance()->getRow($query);
+            if (count($result) == 0) {
+                $uniqueToken = true;
+            } else {
+                $token = md5(uniqid(rand(), true));
+            }
+        }*/
+
         $query = "INSERT INTO `"._DB_PREFIX_."studentdiscounts` (`email`, `id_customer`, `validated`, `verificated`, `token`) VALUES (\"".$email."\",".$customerId.", 0, 0, \"". $token."\")";
         Db::getInstance()->execute($query);
     	$link = Context::getContext()->link->getModuleLink('studentdiscounts', 'verification', array('email' => $email, 'token' => $token));
