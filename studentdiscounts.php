@@ -52,7 +52,7 @@ class Studentdiscounts extends Module
         $this->displayName = $this->l('Student discounts');
         $this->description = $this->l('The module allows users to create a student account that entitles you to discounts');
 
-        $this->ps_versions_compliancy = array('min' => '1.7', 'max' => _PS_VERSION_);
+        $this->ps_versions_compliancy = array('min' => '1.7.7', 'max' => '1.7.8');
         if (Module::isInstalled($this->name)) {
             $this->mySuperCron();
         }
@@ -90,6 +90,7 @@ class Studentdiscounts extends Module
             $this->registerHook('backOfficeHeader') &&
             $this->registerHook('additionalCustomerFormFields') &&
             $this->registerHook('actionCustomerAccountAdd') &&
+            $this->registerHook('actionCustomerAccountUpdate') &&
             $this->registerHook('displayCustomerAccount');
     }
 
@@ -104,8 +105,15 @@ class Studentdiscounts extends Module
         $formField->setName('isStudent');
         $formField->setType('checkbox');
         $formField->setLabel($label);
-        //dump($formField);
-        return [$formField];
+
+        $label = $this->l('Zdjęcia legitymacji');
+        
+        $formField2 = new FormField();
+        $formField2->setName('files');
+        $formField2->setType('file');
+        $formField2->setLabel($label);
+
+        return [$formField, $formField2];
     }
     public function hookDisplayCustomerAccount() {
         $customerId = $this->context->customer->id;
@@ -114,7 +122,7 @@ class Studentdiscounts extends Module
         } else {;}
     }
 
-        /**
+    /**
      * @param array $params
      */
     public function hookActionCustomerAccountAdd(array $params)
@@ -125,20 +133,33 @@ class Studentdiscounts extends Module
         $email = $params['newCustomer']->email;
         $customerId = $params['newCustomer']->id;
         
-        $token = md5(uniqid(rand(), true));/*
-        $uniqueToken = false;
-        while (!$uniqueToken) {
-            $query = 'SELECT * FROM `' . _DB_PREFIX_ . 'id_studentdiscounts` WHERE 	token  = \''. $token . '\'';
-            $result = Db::getInstance()->getRow($query);
-            if (count($result) == 0) {
-                $uniqueToken = true;
-            } else {
-                $token = md5(uniqid(rand(), true));
-            }
-        }*/
+        $token = md5(uniqid(rand(), true));
 
         $query = "INSERT INTO `"._DB_PREFIX_."studentdiscounts` (`email`, `id_customer`, `validated`, `verificated`, `token`) VALUES (\"".$email."\",".$customerId.", 0, 0, \"". $token."\")";
         Db::getInstance()->execute($query);
+    	$link = Context::getContext()->link->getModuleLink('studentdiscounts', 'verification', array('email' => $email, 'token' => $token));
+    	$message = $this->l('Thank you for creating your student account, please click the activation link to verify your email address.');
+        $subject = $this->l('Email verification');
+        $this->sendMail($email, $link, $message, $subject, 'account_activation');
+    }
+
+        /**
+     * @param array $params
+     */
+    public function hookActionCustomerAccountUpdate(array $params)
+    {
+        if (empty($params['customer']) || Tools::getValue('isStudent') == 0) {
+            return;
+        }
+
+        $email = $params['customer']->email;
+        $customerId = $params['customer']->id;
+        
+        $token = md5(uniqid(rand(), true));
+        $db = Db::getInstance();
+        $db->delete('studentdiscounts', 'id_customer = ' . $customerId);
+        $query = "INSERT INTO `"._DB_PREFIX_."studentdiscounts` (`email`, `id_customer`, `validated`, `verificated`, `token`) VALUES (\"".$email."\",".$customerId.", 0, 0, \"". $token."\")";
+        $db->execute($query);
     	$link = Context::getContext()->link->getModuleLink('studentdiscounts', 'verification', array('email' => $email, 'token' => $token));
     	$message = $this->l('Thank you for creating your student account, please click the activation link to verify your email address.');
         $subject = $this->l('Email verification');
@@ -600,7 +621,7 @@ class Studentdiscounts extends Module
             $template, // email template file to be use
             $subject, // email subject
             array(
-                '{email}' => Configuration::get('PS_SHOP_EMAIL'), // sender email address
+                '{email}' => $email, // sender email address
                 '{message}' => $message,
             	'{link}' => $link,
             ),

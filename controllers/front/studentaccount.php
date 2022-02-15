@@ -87,7 +87,7 @@ class StudentdiscountsStudentaccountModuleFrontController extends ModuleFrontCon
            'student_send_photo_alert', // email template file to be use
            $subject, // email subject
            array(
-               '{email}' => Configuration::get('PS_SHOP_EMAIL'), // sender email address
+               '{email}' => $email, // sender email address
                '{message}' => $message,
                '{link}' => $link,
            ),
@@ -113,7 +113,7 @@ class StudentdiscountsStudentaccountModuleFrontController extends ModuleFrontCon
         if (isset($_FILES['studentCart'])) {
             $files =  $_FILES['studentCart'];
             $files = $this->reArrayFiles( $_FILES['studentCart']);
-                $acceptFileType = ['JPG', 'PDF', 'GIF', 'JPEG', 'pdf', 'gif'];
+                $acceptFileType = ['JPG', 'PDF', 'GIF', 'JPEG', 'jpg', 'jpeg', 'pdf', 'gif'];
             foreach ($files as $file) {
                 $target_dir = _PS_MODULE_DIR_. 'studentdiscounts/upload/studentcarts/';
                 $target_file = $target_dir . basename($file["name"]);
