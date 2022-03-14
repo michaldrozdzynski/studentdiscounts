@@ -52,7 +52,7 @@ class Studentdiscounts extends Module
         $this->displayName = $this->l('Student discounts');
         $this->description = $this->l('The module allows users to create a student account that entitles you to discounts');
 
-        $this->ps_versions_compliancy = array('min' => '1.7.7', 'max' => '1.7.8');
+        $this->ps_versions_compliancy = array('min' => '1.7.7', 'max' => _PS_VERSION_);
         if (Module::isInstalled($this->name)) {
             $this->mySuperCron();
         }
