@@ -74,7 +74,7 @@
         </div>
         <div class="row">
           <div class="col-md-3" width="50%" style="text-align:center; margin:auto;">
-            <a href="{Context::getContext()->link->getModuleLink('studentdiscounts', 'studentaccount', array('deletePhotos' => true))}"><button type="button" class="btn btn-danger">{l s='Delete photos' mod='studentdiscounts'}</button></a>
+            <a href="{Context::getContext()->link->getModuleLink('studentdiscounts', 'studentaccount', array('deletePhotos', true))}"><button type="button" class="btn btn-danger">{l s='Delete photos' mod='studentdiscounts'}</button></a>
           </div>
           <div class="col-md-6">
             {foreach $studentaccount['images'] as $image}
