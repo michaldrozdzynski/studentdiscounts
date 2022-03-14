@@ -106,14 +106,7 @@ class Studentdiscounts extends Module
         $formField->setType('checkbox');
         $formField->setLabel($label);
 
-        $label = $this->l('Zdjęcia legitymacji');
-        
-        $formField2 = new FormField();
-        $formField2->setName('files');
-        $formField2->setType('file');
-        $formField2->setLabel($label);
-
-        return [$formField, $formField2];
+        return [$formField];
     }
     public function hookDisplayCustomerAccount() {
         $customerId = $this->context->customer->id;
